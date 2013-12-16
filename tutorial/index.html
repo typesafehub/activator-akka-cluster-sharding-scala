@@ -1,0 +1,75 @@
+<!-- <html> -->
+<head>
+<title>Akka Cluster Sharding with Scala</title>
+</head>
+
+<body>
+
+<div>
+<p>
+This is a runnable sample of  
+<a href="http://doc.akka.io/docs/akka/2.3-M2/scala/contrib/cluster-sharding.html" target="_blank">Akka cluster Sharding</a>.
+</p>
+
+<p>
+Open three terminal windows.
+</p>
+
+<p>
+In the first terminal window, start the first seed node with the following command:
+</p>
+
+<pre><code>
+sbt "runMain sample.cluster.counter.ShardingApp 2551"
+</code></pre>
+
+<p>
+2551 corresponds to the port of the first seed-nodes element in the configuration. In the log
+output you see that the cluster node has been started and changed status to 'Up'.
+</p>
+
+<p>
+In the second terminal window, start the second seed node with the following command:
+</p>
+
+<pre><code>
+sbt "runMain sample.cluster.counter.ShardingApp 2552"		
+</code></pre>
+
+<p>
+2552 corresponds to the port of the second seed-nodes element in the configuration. In the
+log output you see that the cluster node has been started and joins the other seed node and
+becomes a member of the cluster. Its status changed to 'Up'.
+</p>
+
+<p>
+Switch over to the first terminal window and see in the log output that the member joined.
+</p>
+
+<p>
+You should also be able to see log output of the <code>Bot</code> that generates random
+operations (Increment/Decrement/Get) to random <code>Counter</code> entries.
+</p>
+
+<p>
+Start more nodes with 
+
+<pre><code>
+sbt "runMain sample.cluster.counter.ShardingApp 0"
+</code></pre>
+
+<p>
+Now you don't need to specify the port number, 0 means that it will use a random available port.
+It joins one of the configured seed nodes. Look at the log output in the different terminal
+windows.
+</p>
+
+<p>
+Note that this sample runs the shared journal on the node with port 2551. This is a 
+SPOF. A real system would use a distributed journal.
+</p>
+
+</div>
+
+</body>
+</html>
