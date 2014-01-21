@@ -36,7 +36,7 @@ class Counter extends EventsourcedProcessor {
   def updateState(event: CounterChanged): Unit =
     count += event.delta
 
-  override def receiveReplay: Receive = {
+  override def receiveRecover: Receive = {
     case evt: CounterChanged => updateState(evt)
   }
 
