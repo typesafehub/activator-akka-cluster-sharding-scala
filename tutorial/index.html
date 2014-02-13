@@ -6,13 +6,202 @@
 <body>
 
 <div>
+
 <p>
-This is a runnable sample of  
-<a href="http://doc.akka.io/docs/akka/2.3.0-RC1/scala/contrib/cluster-sharding.html" target="_blank">Akka cluster Sharding</a>.
+<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/contrib/cluster-sharding.html" target="_blank">Akka cluster Sharding</a>
+is useful when you need to distribute actors across several nodes in the cluster and want to
+be able to interact with them using their logical identifier, but without having to care about
+their physical location in the cluster, which might also change over time.
 </p>
 
 <p>
-Open three terminal windows.
+It can be actors representing Aggregate Roots in Domain-Driven Design terminology.
+These actors typically have persistent (durable) state, which can be implemented with
+<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/scala/persistence.html" target="_blank">Akka Persistence</a>.
+</p>
+
+<p>
+Cluster sharding is typically used when you have many stateful actors that together consume
+more resources (e.g. memory) than fit on one machine. If you only have a few stateful actors
+it might be easier to run them on a 
+<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/scala/contrib/cluster-singleton.html" target="_blank">Cluster Singleton</a>
+node.
+</p>
+
+</div>
+<div>
+<h2>The Blog Post Actor</h2>
+
+<p>
+To illustrate the cluster sharding feature we will use a small blog post application.
+To make it easy to understand it has limited capabilities, and that also makes it possible for
+you to get your hands dirty by adding more functionality as suggested in the end of the tutorial.
+</p>
+
+<p>
+Open <a href="#code/src/main/scala/sample/blog/Post.scala" class="shortcut">Post.scala</a>.
+</p>
+
+<p>
+<code>Post</code> is an actor representing an individual blog post, i.e. we will create a new
+<code>Post</code> actor instance for each new blog post. The actor is using 
+<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/scala/persistence.html#Event_sourcing" target="_blank">event sourcing</a>
+to store the changes that build up its current state.
+</p>
+
+<p>
+Go to the <code>receiveCommand</code> method and note the similarities
+of how the different messages are handled.
+An event sourced actor typically follows these steps when receiving a message:
+</p>
+
+<ol>
+<li>validate the incoming message</li>
+<li>create a domain event that represents the state change, and store it with <code>persist</code></li>
+<li>update the actor's state inside the <code>persist</code> block, which is invoked after successful storage</li>
+<li>do external side effects inside the <code>persist</code> block</li> 
+</ol>
+
+<p>
+Note that if the JVM crashes right after successful storage the side effect in the last
+step is never executed even though the event has been stored.
+</p>
+ 
+<p>
+For some use cases you may want to do external side effects before persisting the
+domain events, with the risk that the side effect was performed even though storage
+of the event fails.
+</p>
+
+<p>
+It is recommended to encapsulate the state in an immutable class as illustrated
+in the <code>Post.State</code> class. It knows how to create a new <code>State</code>
+instance when applying the changes represented by domain events. It is important that the
+state updates are free from side effect, because they are applied when the actor
+is recovered from the persisted events. See <code>receiveRecover</code>.
+</p>
+
+</div>
+<div>
+<h2>Sharding the Blog Post Actor</h2>
+
+<p>
+Open <a href="#code/src/main/scala/sample/blog/BlogApp.scala" class="shortcut">BlogApp.scala</a>.
+</p>
+
+<p>
+To make the <code>Post</code> actors sharded in the cluster we need to register it to the 
+<code>ClusterSharding</code> extension. See <code>ClusterSharding(system).start</code>
+in the <code>BlogApp</code>. Descriptions of the parameters can be found in the API
+documentation of <code>ClusterSharding</code>. This must be done on all nodes in
+the cluster.
+</p>
+
+<p>
+The sharding is based on a hash function of the <code>postId</code>. That function is
+defined in the companion object of the 
+<a href="#code/src/main/scala/sample/blog/Post.scala" class="shortcut">Post</a>.
+The <code>postId</code> is a String representation of a <code>UUID</code>.
+</p>
+
+<p>
+Open <a href="#code/src/main/scala/sample/blog/Bot.scala" class="shortcut">Bot.scala</a>.
+</p>
+
+<p>
+The <code>Bot</code> actor simulates creation of blog posts by several authors.
+</p>
+
+<p>
+To send messages to the identifier of the <code>Post</code> actor you need
+to send them via the <code>shardRegion</code> actor, which can be retrieved via the 
+<code>ClusterSharding</code> extension. The sharding feature knows how to route the
+message and it will on demand allocate the <code>Post</code> actors to cluster nodes
+and create the actor instances. Exactly how this works under the hood is described in the 
+<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/contrib/cluster-sharding.html" target="_blank">documentation</a>. 
+</p>
+
+</div>
+<div>
+<h2>Listing of Blog Posts</h2>
+
+<p>
+Open <a href="#code/src/main/scala/sample/blog/AuthorListing.scala" class="shortcut">AuthorListing.scala</a>.
+</p>
+
+<p>
+The <code>AuthorListing</code> actor collects a list of all published post by
+a specific author, i.e. one <code>AuthorListing</code> instance for each author.
+The state of this actor is persistent using 
+<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/scala/persistence.html#Processors" target="_blank">command sourcing</a>,
+i.e. the incoming <code>Persistent</code> messages are stored directly.
+</p>
+
+<p>
+Why did we use event sourcing for the <code>Post</code> and command sourcing for the <code>AuthorListing</code>?
+</p>
+<p>
+The <code>Post</code> needs to validate the incoming messages before the change is
+applied to its current state. The event sourcing approach makes that possible. When using
+command sourcing the incoming messages messages are persisted before it is known whether
+they can be successfully processed or not.
+</p>
+<p>
+Another difference is that side effects are performed again when recovering the state
+of a command sourced processor and that means that you have to use channels or some other
+mechanisms to deduplicate messages that are sent out from the processor. An event sourced
+actor does not perform any external side effects when recovering. Command sourcing is a good
+choice for the <code>AuthorListing</code>, since it does not perform any validation and
+it does not emit any messages.
+</p>
+<p>
+It is also good to know that higher throughput can be
+achieved with command sourcing because under high load it can take full advantage of
+batching the writes to the journal.
+</p>
+
+<p>
+The <code>Persistent</code> <code>PostSummary</code> messages are sent by the 
+<a href="#code/src/main/scala/sample/blog/Post.scala" class="shortcut">Post</a>
+actor when a post is published.
+</p>
+
+<p>
+<code>AuthorListing</code> is also sharded. It is registered in the 
+<a href="#code/src/main/scala/sample/blog/BlogApp.scala" class="shortcut">BlogApp</a>
+and its region is used in the 
+<a href="#code/src/main/scala/sample/blog/Bot.scala" class="shortcut">Bot</a>. 
+It is using a hash function of the <code>author</code>. That function is
+defined in the companion object of the 
+<a href="#code/src/main/scala/sample/blog/AuthorListing.scala" class="shortcut">AuthorListing</a>.
+</p>
+
+</div>
+<div>
+<h2>Test</h2>
+
+<p>
+A multi-jvm test for the blog application can be found in 
+<a href="#code/src/multi-jvm/scala/sample/blog/BlogSpec.scala" class="shortcut">BlogSpec.scala</a>.
+You can run it from the <a href="#test" class="shortcut">Test</a> tab.
+</p>
+
+</div>
+<div>
+<h2>Run the Simulation</h2>
+
+<p>
+Go to the <a href="#run" class="shortcut">Run</a> tab to see the running 
+<a href="#code/src/main/scala/sample/blog/BlogApp.scala" class="shortcut">BlogApp</a>
+with the
+<a href="#code/src/main/scala/sample/blog/Bot.scala" class="shortcut">Bot</a>.
+In the log output you should be able to see that new blog posts are created.
+</p>
+
+<p>
+<code>BlogApp</code> starts three actor systems (cluster members) in the same JVM process. It can be more
+interesting to run them in separate processes. <b>Stop</b> the application in the
+<a href="#run" class="shortcut">Run</a> tab and then open three terminal windows.
 </p>
 
 <p>
@@ -20,7 +209,7 @@ In the first terminal window, start the first seed node with the following comma
 </p>
 
 <pre><code>
-sbt "runMain sample.cluster.counter.ShardingApp 2551"
+&lt;path to activator dir&gt;/activator "runMain sample.blog.BlogApp 2551"
 </code></pre>
 
 <p>
@@ -33,7 +222,7 @@ In the second terminal window, start the second seed node with the following com
 </p>
 
 <pre><code>
-sbt "runMain sample.cluster.counter.ShardingApp 2552"		
+&lt;path to activator dir&gt;/activator "runMain sample.blog.BlogApp 2552"		
 </code></pre>
 
 <p>
@@ -44,18 +233,15 @@ becomes a member of the cluster. Its status changed to 'Up'.
 
 <p>
 Switch over to the first terminal window and see in the log output that the member joined.
+So far, the <code>Bot</code> has not been started, i.e. no blog posts are created.
 </p>
 
 <p>
-You should also be able to see log output of the <code>Bot</code> that generates random
-operations (Increment/Decrement/Get) to random <code>Counter</code> entries.
+In the third terminal window, start one more node with the following command:
 </p>
-
-<p>
-Start more nodes with 
 
 <pre><code>
-sbt "runMain sample.cluster.counter.ShardingApp 0"
+&lt;path to activator dir&gt;/activator "runMain sample.blog.BlogApp 0"
 </code></pre>
 
 <p>
@@ -65,11 +251,77 @@ windows.
 </p>
 
 <p>
-Note that this sample runs the shared journal on the node with port 2551. This is a 
-SPOF. A real system would use a distributed journal.
+The <code>Bot</code> is started on nodes with port not equal to 2551 or 2552, i.e. now
+it has not been started. You should be able to see log output of the <code>Bot</code>
+that generates blog posts.
 </p>
 
+<p>
+Take a look at the logging that is done in 
+<a href="#code/src/main/scala/sample/blog/Post.scala" class="shortcut">Post</a>,
+<a href="#code/src/main/scala/sample/blog/AuthorListing.scala" class="shortcut">AuthorListing</a>
+and <a href="#code/src/main/scala/sample/blog/Bot.scala" class="shortcut">Bot</a>.
+Identify the corresponding log entries in the 3 terminal windows.
+</p>
+
+<p>
+Shutdown the node with port 2552 (second terminal window) with <code>ctrl-c</code>.
+Observe how the other nodes detect the failure and remove the node from the cluster.
+Also note that requests to the <code>AuthorListing</code> for a specific author that
+previously was located on the node with port 2552 will be failed over to one of the
+other nodes. Look for the log message starting with "Post added to".
+</p>
+
+<p>
+You can also start even more nodes with the command:
+</p>
+
+<pre><code>
+&lt;path to activator dir&gt;/activator "runMain sample.blog.BlogApp 0"
+</code></pre>
+
+<p>
+For each additional node another <code>Bot</code> is also started.
+</p>
+
+<p>
+Note that this sample runs the 
+<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/scala/persistence.html#Shared_LevelDB_journal" target="_blank">shared LevelDB journal</a>
+on the node with port 2551. This is a single point of failure, and should not be used in production. 
+A real system would use a 
+<a href="https://gist.github.com/krasserm/8612920#file-akka-persistence-plugins-md" target="_blank">distributed journal</a>.
+</p>
+
+<p>
+The files of the shared journal are saved in the target directory and when you restart
+the application the state is recovered. You can clean the state with:
+</p>
+
+<pre><code>
+&lt;path to activator dir&gt;/activator clean
+</code></pre>
+
 </div>
+<div>
+<h2>Hands-on Exercises</h2>
+
+<p>
+Here is a list of improvements to the blog application that you can try yourself:
+</p>
+
+<ul>
+<li>Enhance the functionality of the event sourced
+    <a href="#code/src/main/scala/sample/blog/Post.scala" class="shortcut">Post</a> actor.
+    Edit title. Change author. Adding and removing comments.</li>
+<li>Create a <a href="http://martinfowler.com/bliki/CQRS.html" target="_blank">CQRS</a> query side
+    by using a persistent view of the <a href="#code/src/main/scala/sample/blog/AuthorListing.scala" class="shortcut">AuthorListing</a>
+    processor.</li>
+<li>Replace the
+    <a href="http://doc.akka.io/docs/akka/2.3.0-RC4/scala/persistence.html#Shared_LevelDB_journal" target="_blank">shared LevelDB journal</a> 
+    with a real replicated journal. Pick one
+    from the <a href="http://akka.io/community/" target="_blank">community plugins</a>.</li>
+</ul>
+
 
 </body>
 </html>
