@@ -1,19 +1,19 @@
-package sample.cluster.counter
+package sample.blog
 
 import scala.concurrent.duration._
 import com.typesafe.config.ConfigFactory
+import akka.actor.ActorIdentity
+import akka.actor.ActorPath
 import akka.actor.ActorSystem
+import akka.actor.Identify
 import akka.actor.Props
 import akka.contrib.pattern.ClusterSharding
-import akka.persistence.journal.leveldb.SharedLeveldbStore
-import akka.actor.Identify
-import akka.actor.ActorPath
 import akka.pattern.ask
-import akka.util.Timeout
-import akka.actor.ActorIdentity
 import akka.persistence.journal.leveldb.SharedLeveldbJournal
+import akka.persistence.journal.leveldb.SharedLeveldbStore
+import akka.util.Timeout
 
-object ShardingApp {
+object BlogApp {
   def main(args: Array[String]): Unit = {
     if (args.isEmpty)
       startup(Seq("2551", "2552", "0"))
@@ -34,18 +34,18 @@ object ShardingApp {
         ActorPath.fromString("akka.tcp://ClusterSystem@127.0.0.1:2551/user/store"))
 
       ClusterSharding(system).start(
-        typeName = "Counter",
-        entryProps = Some(Props[Counter]),
-        idExtractor = Counter.idExtractor,
-        shardResolver = Counter.shardResolver)
-
+        typeName = Post.shardName,
+        entryProps = Some(Props[Post]),
+        idExtractor = Post.idExtractor,
+        shardResolver = Post.shardResolver)
       ClusterSharding(system).start(
-        typeName = "AnotherCounter",
-        entryProps = Some(Props[Counter]),
-        idExtractor = Counter.idExtractor,
-        shardResolver = Counter.shardResolver)
+        typeName = AuthorListing.shardName,
+        entryProps = Some(Props[AuthorListing]),
+        idExtractor = AuthorListing.idExtractor,
+        shardResolver = AuthorListing.shardResolver)
 
-      system.actorOf(Props[Bot], "bot")
+      if (port != "2551" && port != "2552")
+        system.actorOf(Props[Bot], "bot")
     }
 
     def startupSharedJournal(system: ActorSystem, startStore: Boolean, path: ActorPath): Unit = {

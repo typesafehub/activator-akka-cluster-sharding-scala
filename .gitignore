@@ -43,3 +43,4 @@ tm*.lck
 tm*.log
 tm.out
 worker*.log
+/bin
