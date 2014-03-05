@@ -34,15 +34,15 @@ object BlogApp {
         ActorPath.fromString("akka.tcp://ClusterSystem@127.0.0.1:2551/user/store"))
 
       ClusterSharding(system).start(
-        typeName = Post.shardName,
-        entryProps = Some(Props[Post]),
-        idExtractor = Post.idExtractor,
-        shardResolver = Post.shardResolver)
-      ClusterSharding(system).start(
         typeName = AuthorListing.shardName,
-        entryProps = Some(Props[AuthorListing]),
+        entryProps = Some(AuthorListing.props()),
         idExtractor = AuthorListing.idExtractor,
         shardResolver = AuthorListing.shardResolver)
+      ClusterSharding(system).start(
+        typeName = Post.shardName,
+        entryProps = Some(Post.props(ClusterSharding(system).shardRegion(AuthorListing.shardName))),
+        idExtractor = Post.idExtractor,
+        shardResolver = Post.shardResolver)
 
       if (port != "2551" && port != "2552")
         system.actorOf(Props[Bot], "bot")

@@ -9,8 +9,12 @@ import akka.contrib.pattern.ShardRegion
 import akka.contrib.pattern.ShardRegion.Passivate
 import akka.persistence.Persistent
 import akka.persistence.Processor
+import akka.actor.Props
 
 object AuthorListing {
+
+  def props(): Props = Props(new AuthorListing)
+
   case class PostSummary(author: String, postId: String, title: String)
   case class GetPosts(author: String)
   case class Posts(list: immutable.IndexedSeq[PostSummary])
