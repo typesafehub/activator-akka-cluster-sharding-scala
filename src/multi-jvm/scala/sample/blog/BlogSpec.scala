@@ -1,23 +1,22 @@
-//#package
 package sample.blog
 
-import scala.concurrent.duration._
-import akka.remote.testkit.MultiNodeConfig
-import akka.remote.testkit.MultiNodeSpec
-import akka.testkit.ImplicitSender
-import akka.actor.{ Props, Actor }
-import org.apache.commons.io.FileUtils
 import java.io.File
-import akka.remote.testconductor.RoleName
+import java.util.UUID
+import scala.concurrent.duration._
+import org.apache.commons.io.FileUtils
+import com.typesafe.config.ConfigFactory
+import akka.actor.ActorIdentity
+import akka.actor.Identify
+import akka.actor.Props
 import akka.cluster.Cluster
 import akka.contrib.pattern.ClusterSharding
 import akka.persistence.Persistence
-import com.typesafe.config.ConfigFactory
-import akka.persistence.journal.leveldb.SharedLeveldbStore
-import akka.actor.Identify
-import akka.actor.ActorIdentity
 import akka.persistence.journal.leveldb.SharedLeveldbJournal
-import java.util.UUID
+import akka.persistence.journal.leveldb.SharedLeveldbStore
+import akka.remote.testconductor.RoleName
+import akka.remote.testkit.MultiNodeConfig
+import akka.remote.testkit.MultiNodeSpec
+import akka.testkit.ImplicitSender
 
 object BlogSpec extends MultiNodeConfig {
   val controller = role("controller")
@@ -73,15 +72,15 @@ class BlogSpec extends MultiNodeSpec(BlogSpec)
 
   def startSharding(): Unit = {
     ClusterSharding(system).start(
-      typeName = Post.shardName,
-      entryProps = Some(Props[Post]),
-      idExtractor = Post.idExtractor,
-      shardResolver = Post.shardResolver)
-    ClusterSharding(system).start(
       typeName = AuthorListing.shardName,
-      entryProps = Some(Props[AuthorListing]),
+      entryProps = Some(AuthorListing.props()),
       idExtractor = AuthorListing.idExtractor,
       shardResolver = AuthorListing.shardResolver)
+    ClusterSharding(system).start(
+      typeName = Post.shardName,
+      entryProps = Some(Post.props(ClusterSharding(system).shardRegion(AuthorListing.shardName))),
+      idExtractor = Post.idExtractor,
+      shardResolver = Post.shardResolver)
   }
 
   "Sharded blog app" must {

@@ -1,4 +1,3 @@
-//#example
 package sample.blog
 
 import org.scalatest.{ BeforeAndAfterAll, WordSpecLike }

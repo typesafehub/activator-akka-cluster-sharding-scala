@@ -1,16 +1,20 @@
 package sample.blog
 
 import scala.concurrent.duration._
-import akka.persistence.EventsourcedProcessor
-import akka.actor.ReceiveTimeout
-import akka.contrib.pattern.ShardRegion.Passivate
-import akka.actor.PoisonPill
-import akka.contrib.pattern.ShardRegion
-import akka.contrib.pattern.ClusterSharding
-import akka.persistence.Persistent
 import akka.actor.ActorLogging
+import akka.actor.ActorRef
+import akka.actor.PoisonPill
+import akka.actor.Props
+import akka.actor.ReceiveTimeout
+import akka.contrib.pattern.ShardRegion
+import akka.contrib.pattern.ShardRegion.Passivate
+import akka.persistence.EventsourcedProcessor
+import akka.persistence.Persistent
 
 object Post {
+
+  def props(authorListing: ActorRef): Props =
+    Props(new Post(authorListing))
 
   object PostContent {
     val empty = PostContent("", "", "")
@@ -50,7 +54,7 @@ object Post {
   }
 }
 
-class Post extends EventsourcedProcessor with ActorLogging {
+class Post(authorListing: ActorRef) extends EventsourcedProcessor with ActorLogging {
 
   import Post._
 
@@ -84,8 +88,7 @@ class Post extends EventsourcedProcessor with ActorLogging {
             state = state.updated(evt)
             val c = state.content
             log.info("Post published: {}", c.title)
-            val listing = ClusterSharding(context.system).shardRegion(AuthorListing.shardName)
-            listing ! Persistent(AuthorListing.PostSummary(c.author, postId, c.title))
+            authorListing ! Persistent(AuthorListing.PostSummary(c.author, postId, c.title))
           }
     }
     case ReceiveTimeout => context.parent ! Passivate(stopMessage = PoisonPill)
