@@ -64,34 +64,53 @@ class Post(authorListing: ActorRef) extends EventsourcedProcessor with ActorLogg
   private var state = State(PostContent.empty, false)
 
   override def receiveRecover: Receive = {
-    case evt: Event => state = state.updated(evt)
+    case evt: PostAdded =>
+      context.become(created)
+      state = state.updated(evt)
+    case evt @ PostPublished =>
+      context.become(created)
+      state = state.updated(evt)
+    case evt: Event => state =
+      state.updated(evt)
   }
 
-  override def receiveCommand: Receive = {
-    case cmd: Command => cmd match {
-      case GetContent(_) => sender() ! state.content
-      case AddPost(_, content) =>
-        if (state.content == PostContent.empty && content.author != "" && content.title != "")
-          persist(PostAdded(content)) { evt =>
-            state = state.updated(evt)
-            log.info("New post saved: {}", state.content.title)
-          }
-      case ChangeBody(_, body) =>
-        if (!state.published)
-          persist(BodyChanged(body)) { evt =>
-            state = state.updated(evt)
-            log.info("Post changed: {}", state.content.title)
-          }
-      case Publish(postId) =>
-        if (!state.published)
-          persist(PostPublished) { evt =>
-            state = state.updated(evt)
-            val c = state.content
-            log.info("Post published: {}", c.title)
-            authorListing ! Persistent(AuthorListing.PostSummary(c.author, postId, c.title))
-          }
-    }
+  override def receiveCommand: Receive = initial
+
+  def initial: Receive = {
+    case GetContent(_) => sender() ! state.content
+    case AddPost(_, content) =>
+      if (content.author != "" && content.title != "")
+        persist(PostAdded(content)) { evt =>
+          state = state.updated(evt)
+          context.become(created)
+          log.info("New post saved: {}", state.content.title)
+        }
+  }
+
+  def created: Receive = {
+    case GetContent(_) => sender() ! state.content
+    case ChangeBody(_, body) =>
+      persist(BodyChanged(body)) { evt =>
+        state = state.updated(evt)
+        log.info("Post changed: {}", state.content.title)
+      }
+    case Publish(postId) =>
+      persist(PostPublished) { evt =>
+        state = state.updated(evt)
+        context.become(published)
+        val c = state.content
+        log.info("Post published: {}", c.title)
+        authorListing ! Persistent(AuthorListing.PostSummary(c.author, postId, c.title))
+      }
+  }
+
+  def published: Receive = {
+    case GetContent(_) => sender() ! state.content
+  }
+
+  override def unhandled(msg: Any): Unit = msg match {
     case ReceiveTimeout => context.parent ! Passivate(stopMessage = PoisonPill)
+    case _              => super.unhandled(msg)
   }
 
 }

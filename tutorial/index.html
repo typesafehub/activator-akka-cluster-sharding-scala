@@ -50,8 +50,7 @@ to store the changes that build up its current state.
 </p>
 
 <p>
-Go to the <code>receiveCommand</code> method and note the similarities
-of how the different messages are handled.
+Look at how the different messages are handled and note the similarities.
 An event sourced actor typically follows these steps when receiving a message:
 </p>
 
@@ -313,6 +312,11 @@ Here is a list of improvements to the blog application that you can try yourself
 <li>Enhance the functionality of the event sourced
     <a href="#code/src/main/scala/sample/blog/Post.scala" class="shortcut">Post</a> actor.
     Edit title. Change author. Adding and removing comments.</li>
+<li>Note that the <a href="#code/src/main/scala/sample/blog/Bot.scala" class="shortcut">Bot</a>
+    naively assumes that each step of creating, changing and publishing a blog post is succesful.
+    If some step fails it will get stuck in the "wrong state". Add acknowlegement messages for the
+    operations in the <a href="#code/src/main/scala/sample/blog/Post.scala" class="shortcut">Post</a>
+    actor and handle the failure scenarios in the <code>Bot</code>.</li>
 <li>Create a <a href="http://martinfowler.com/bliki/CQRS.html" target="_blank">CQRS</a> query side
     by using a persistent view of the <a href="#code/src/main/scala/sample/blog/AuthorListing.scala" class="shortcut">AuthorListing</a>
     processor.</li>
