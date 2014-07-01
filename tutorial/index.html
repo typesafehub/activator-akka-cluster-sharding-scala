@@ -8,7 +8,7 @@
 <div>
 
 <p>
-<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/contrib/cluster-sharding.html" target="_blank">Akka cluster Sharding</a>
+<a href="http://doc.akka.io/docs/akka/2.3.4/contrib/cluster-sharding.html" target="_blank">Akka cluster Sharding</a>
 is useful when you need to distribute actors across several nodes in the cluster and want to
 be able to interact with them using their logical identifier, but without having to care about
 their physical location in the cluster, which might also change over time.
@@ -17,14 +17,14 @@ their physical location in the cluster, which might also change over time.
 <p>
 It can be actors representing Aggregate Roots in Domain-Driven Design terminology.
 These actors typically have persistent (durable) state, which can be implemented with
-<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/scala/persistence.html" target="_blank">Akka Persistence</a>.
+<a href="http://doc.akka.io/docs/akka/2.3.4/scala/persistence.html" target="_blank">Akka Persistence</a>.
 </p>
 
 <p>
 Cluster sharding is typically used when you have many stateful actors that together consume
 more resources (e.g. memory) than fit on one machine. If you only have a few stateful actors
 it might be easier to run them on a 
-<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/scala/contrib/cluster-singleton.html" target="_blank">Cluster Singleton</a>
+<a href="http://doc.akka.io/docs/akka/2.3.4/scala/contrib/cluster-singleton.html" target="_blank">Cluster Singleton</a>
 node.
 </p>
 
@@ -45,7 +45,7 @@ Open <a href="#code/src/main/scala/sample/blog/Post.scala" class="shortcut">Post
 <p>
 <code>Post</code> is an actor representing an individual blog post, i.e. we will create a new
 <code>Post</code> actor instance for each new blog post. The actor is using 
-<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/scala/persistence.html#Event_sourcing" target="_blank">event sourcing</a>
+<a href="http://doc.akka.io/docs/akka/2.3.4/scala/persistence.html#Event_sourcing" target="_blank">event sourcing</a>
 to store the changes that build up its current state.
 </p>
 
@@ -117,7 +117,7 @@ to send them via the <code>shardRegion</code> actor, which can be retrieved via 
 <code>ClusterSharding</code> extension. The sharding feature knows how to route the
 message and it will on demand allocate the <code>Post</code> actors to cluster nodes
 and create the actor instances. Exactly how this works under the hood is described in the 
-<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/contrib/cluster-sharding.html" target="_blank">documentation</a>. 
+<a href="http://doc.akka.io/docs/akka/2.3.4/contrib/cluster-sharding.html" target="_blank">documentation</a>. 
 </p>
 
 </div>
@@ -131,32 +131,6 @@ Open <a href="#code/src/main/scala/sample/blog/AuthorListing.scala" class="short
 <p>
 The <code>AuthorListing</code> actor collects a list of all published post by
 a specific author, i.e. one <code>AuthorListing</code> instance for each author.
-The state of this actor is persistent using 
-<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/scala/persistence.html#Processors" target="_blank">command sourcing</a>,
-i.e. the incoming <code>Persistent</code> messages are stored directly.
-</p>
-
-<p>
-Why did we use event sourcing for the <code>Post</code> and command sourcing for the <code>AuthorListing</code>?
-</p>
-<p>
-The <code>Post</code> needs to validate the incoming messages before the change is
-applied to its current state. The event sourcing approach makes that possible. When using
-command sourcing the incoming messages messages are persisted before it is known whether
-they can be successfully processed or not.
-</p>
-<p>
-Another difference is that side effects are performed again when recovering the state
-of a command sourced processor and that means that you have to use channels or some other
-mechanisms to deduplicate messages that are sent out from the processor. An event sourced
-actor does not perform any external side effects when recovering. Command sourcing is a good
-choice for the <code>AuthorListing</code>, since it does not perform any validation and
-it does not emit any messages.
-</p>
-<p>
-It is also good to know that higher throughput can be
-achieved with command sourcing because under high load it can take full advantage of
-batching the writes to the journal.
 </p>
 
 <p>
@@ -285,10 +259,10 @@ For each additional node another <code>Bot</code> is also started.
 
 <p>
 Note that this sample runs the 
-<a href="http://doc.akka.io/docs/akka/2.3.0-RC4/scala/persistence.html#Shared_LevelDB_journal" target="_blank">shared LevelDB journal</a>
+<a href="http://doc.akka.io/docs/akka/2.3.4/scala/persistence.html#Shared_LevelDB_journal" target="_blank">shared LevelDB journal</a>
 on the node with port 2551. This is a single point of failure, and should not be used in production. 
 A real system would use a 
-<a href="https://gist.github.com/krasserm/8612920#file-akka-persistence-plugins-md" target="_blank">distributed journal</a>.
+<a href="http://akka.io/community/" target="_blank">distributed journal</a>.
 </p>
 
 <p>
@@ -321,7 +295,7 @@ Here is a list of improvements to the blog application that you can try yourself
     by using a persistent view of the <a href="#code/src/main/scala/sample/blog/AuthorListing.scala" class="shortcut">AuthorListing</a>
     processor.</li>
 <li>Replace the
-    <a href="http://doc.akka.io/docs/akka/2.3.0-RC4/scala/persistence.html#Shared_LevelDB_journal" target="_blank">shared LevelDB journal</a> 
+    <a href="http://doc.akka.io/docs/akka/2.3.4/scala/persistence.html#Shared_LevelDB_journal" target="_blank">shared LevelDB journal</a> 
     with a real replicated journal. Pick one
     from the <a href="http://akka.io/community/" target="_blank">community plugins</a>.</li>
 </ul>
