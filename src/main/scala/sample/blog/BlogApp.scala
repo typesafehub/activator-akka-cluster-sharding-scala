@@ -33,14 +33,14 @@ object BlogApp {
       startupSharedJournal(system, startStore = (port == "2551"), path =
         ActorPath.fromString("akka.tcp://ClusterSystem@127.0.0.1:2551/user/store"))
 
-      ClusterSharding(system).start(
+      val authorListingRegion = ClusterSharding(system).start(
         typeName = AuthorListing.shardName,
         entryProps = Some(AuthorListing.props()),
         idExtractor = AuthorListing.idExtractor,
         shardResolver = AuthorListing.shardResolver)
       ClusterSharding(system).start(
         typeName = Post.shardName,
-        entryProps = Some(Post.props(ClusterSharding(system).shardRegion(AuthorListing.shardName))),
+        entryProps = Some(Post.props(authorListingRegion)),
         idExtractor = Post.idExtractor,
         shardResolver = Post.shardResolver)
 
@@ -55,7 +55,7 @@ object BlogApp {
         system.actorOf(Props[SharedLeveldbStore], "store")
       // register the shared journal
       import system.dispatcher
-      implicit val timeout = Timeout(1.minute)
+      implicit val timeout = Timeout(15.seconds)
       val f = (system.actorSelection(path) ? Identify(None))
       f.onSuccess {
         case ActorIdentity(_, Some(ref)) => SharedLeveldbJournal.setStore(ref, system)

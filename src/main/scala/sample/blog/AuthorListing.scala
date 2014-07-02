@@ -3,13 +3,12 @@ package sample.blog
 import scala.collection.immutable
 import scala.concurrent.duration._
 import akka.actor.ActorLogging
+import akka.actor.Props
 import akka.actor.PoisonPill
 import akka.actor.ReceiveTimeout
 import akka.contrib.pattern.ShardRegion
 import akka.contrib.pattern.ShardRegion.Passivate
-import akka.persistence.Persistent
-import akka.persistence.Processor
-import akka.actor.Props
+import akka.persistence.PersistentActor
 
 object AuthorListing {
 
@@ -20,33 +19,42 @@ object AuthorListing {
   case class Posts(list: immutable.IndexedSeq[PostSummary])
 
   val idExtractor: ShardRegion.IdExtractor = {
-    case p @ Persistent(s: PostSummary, _) => (s.author, p)
-    case m: GetPosts                       => (m.author, m)
+    case s: PostSummary => (s.author, s)
+    case m: GetPosts    => (m.author, m)
   }
 
   val shardResolver: ShardRegion.ShardResolver = msg => msg match {
-    case Persistent(s: PostSummary, _) => (math.abs(s.author.hashCode) % 100).toString
-    case GetPosts(author)              => (math.abs(author.hashCode) % 100).toString
+    case s: PostSummary   => (math.abs(s.author.hashCode) % 100).toString
+    case GetPosts(author) => (math.abs(author.hashCode) % 100).toString
   }
 
   val shardName: String = "AuthorListing"
 }
 
-class AuthorListing extends Processor with ActorLogging {
+class AuthorListing extends PersistentActor with ActorLogging {
   import AuthorListing._
+
+  override def persistenceId: String = self.path.parent.name + "-" + self.path.name
 
   // passivate the entity when no activity
   context.setReceiveTimeout(2.minutes)
 
   var posts = Vector.empty[PostSummary]
 
-  def receive = {
-    case Persistent(s: PostSummary, _) =>
-      posts :+= s
-      log.info("Post added to {}'s list: {}", s.author, s.title)
+  def receiveCommand = {
+    case s: PostSummary =>
+      persist(s) { evt =>
+        posts :+= evt
+        log.info("Post added to {}'s list: {}", s.author, s.title)
+      }
     case GetPosts(_) =>
       sender() ! Posts(posts)
     case ReceiveTimeout => context.parent ! Passivate(stopMessage = PoisonPill)
+  }
+
+  override def receiveRecover: Receive = {
+    case evt: PostSummary => posts :+= evt
+
   }
 
 }

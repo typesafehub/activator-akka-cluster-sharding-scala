@@ -8,8 +8,7 @@ import akka.actor.Props
 import akka.actor.ReceiveTimeout
 import akka.contrib.pattern.ShardRegion
 import akka.contrib.pattern.ShardRegion.Passivate
-import akka.persistence.EventsourcedProcessor
-import akka.persistence.Persistent
+import akka.persistence.PersistentActor
 
 object Post {
 
@@ -54,9 +53,13 @@ object Post {
   }
 }
 
-class Post(authorListing: ActorRef) extends EventsourcedProcessor with ActorLogging {
+class Post(authorListing: ActorRef) extends PersistentActor with ActorLogging {
 
   import Post._
+
+  // self.path.parent.name is the type name (utf-8 URL-encoded) 
+  // self.path.name is the entry identifier (utf-8 URL-encoded)
+  override def persistenceId: String = self.path.parent.name + "-" + self.path.name
 
   // passivate the entity when no activity
   context.setReceiveTimeout(2.minutes)
@@ -100,7 +103,7 @@ class Post(authorListing: ActorRef) extends EventsourcedProcessor with ActorLogg
         context.become(published)
         val c = state.content
         log.info("Post published: {}", c.title)
-        authorListing ! Persistent(AuthorListing.PostSummary(c.author, postId, c.title))
+        authorListing ! AuthorListing.PostSummary(c.author, postId, c.title)
       }
   }
 

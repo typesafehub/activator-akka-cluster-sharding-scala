@@ -1,7 +1,7 @@
 import com.typesafe.sbt.SbtMultiJvm
 import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.MultiJvm
 
-val akkaVersion = "2.3.2"
+val akkaVersion = "2.3.4"
 
 val project = Project(
   id = "akka-cluster-sharding-scala",
@@ -9,11 +9,11 @@ val project = Project(
   settings = Project.defaultSettings ++ SbtMultiJvm.multiJvmSettings ++ Seq(
     name := "akka-cluster-sharding-scala",
     version := "1.0",
-    scalaVersion := "2.10.3",
+    scalaVersion := "2.10.4",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-contrib" % akkaVersion,
       "com.typesafe.akka" %% "akka-multi-node-testkit" % akkaVersion,
-      "org.scalatest" %% "scalatest" % "2.0" % "test",
+      "org.scalatest" %% "scalatest" % "2.1.6" % "test",
       "commons-io" % "commons-io" % "2.4" % "test"),
     // make sure that MultiJvm test are compiled by the default test compilation
     compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
