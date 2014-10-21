@@ -29,7 +29,7 @@ object Post {
   case class Publish(postId: String) extends Command
 
   sealed trait Event
-  case class PostAdded(content: PostContent) extends Event
+  case class PostAdded(content: PostContent) extends Event with BlogData
   case class BodyChanged(body: String) extends Event
   case object PostPublished extends Event
 
@@ -57,7 +57,7 @@ class Post(authorListing: ActorRef) extends PersistentActor with ActorLogging {
 
   import Post._
 
-  // self.path.parent.name is the type name (utf-8 URL-encoded) 
+  // self.path.parent.name is the type name (utf-8 URL-encoded)
   // self.path.name is the entry identifier (utf-8 URL-encoded)
   override def persistenceId: String = self.path.parent.name + "-" + self.path.name
 

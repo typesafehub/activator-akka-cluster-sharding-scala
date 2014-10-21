@@ -14,7 +14,7 @@ object AuthorListing {
 
   def props(): Props = Props(new AuthorListing)
 
-  case class PostSummary(author: String, postId: String, title: String)
+  case class PostSummary(author: String, postId: String, title: String) extends BlogData
   case class GetPosts(author: String)
   case class Posts(list: immutable.IndexedSeq[PostSummary])
 

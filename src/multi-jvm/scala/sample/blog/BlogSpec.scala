@@ -31,6 +31,14 @@ object BlogSpec extends MultiNodeConfig {
       dir = "target/test-shared-journal"
     }
     akka.persistence.snapshot-store.local.dir = "target/test-snapshots"
+    akka.actor {
+      serializers {
+        blog-data = "sample.blog.BlogSerializer"
+      }
+      serialization-bindings {
+        "sample.blog.BlogData" = blog-data
+      }
+    }
     """))
 }
 
