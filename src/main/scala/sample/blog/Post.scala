@@ -71,7 +71,7 @@ class Post(authorListing: ActorRef) extends PersistentActor with ActorLogging {
       context.become(created)
       state = state.updated(evt)
     case evt @ PostPublished =>
-      context.become(created)
+      context.become(published)
       state = state.updated(evt)
     case evt: Event => state =
       state.updated(evt)
