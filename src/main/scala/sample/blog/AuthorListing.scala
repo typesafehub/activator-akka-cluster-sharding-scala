@@ -6,8 +6,8 @@ import akka.actor.ActorLogging
 import akka.actor.Props
 import akka.actor.PoisonPill
 import akka.actor.ReceiveTimeout
-import akka.contrib.pattern.ShardRegion
-import akka.contrib.pattern.ShardRegion.Passivate
+import akka.cluster.sharding.ShardRegion
+import akka.cluster.sharding.ShardRegion.Passivate
 import akka.persistence.PersistentActor
 
 object AuthorListing {
@@ -18,12 +18,12 @@ object AuthorListing {
   case class GetPosts(author: String)
   case class Posts(list: immutable.IndexedSeq[PostSummary])
 
-  val idExtractor: ShardRegion.IdExtractor = {
+  val idExtractor: ShardRegion.ExtractEntityId = {
     case s: PostSummary => (s.author, s)
     case m: GetPosts    => (m.author, m)
   }
 
-  val shardResolver: ShardRegion.ShardResolver = msg => msg match {
+  val shardResolver: ShardRegion.ExtractShardId = {
     case s: PostSummary   => (math.abs(s.author.hashCode) % 100).toString
     case GetPosts(author) => (math.abs(author.hashCode) % 100).toString
   }
