@@ -7,7 +7,7 @@ import akka.actor.ActorPath
 import akka.actor.ActorSystem
 import akka.actor.Identify
 import akka.actor.Props
-import akka.contrib.pattern.ClusterSharding
+import akka.cluster.sharding.{ClusterShardingSettings, ClusterSharding}
 import akka.pattern.ask
 import akka.persistence.journal.leveldb.SharedLeveldbJournal
 import akka.persistence.journal.leveldb.SharedLeveldbStore
@@ -33,16 +33,19 @@ object BlogApp {
       startupSharedJournal(system, startStore = (port == "2551"), path =
         ActorPath.fromString("akka.tcp://ClusterSystem@127.0.0.1:2551/user/store"))
 
+      val shardSettings = ClusterShardingSettings(system)
       val authorListingRegion = ClusterSharding(system).start(
         typeName = AuthorListing.shardName,
-        entryProps = Some(AuthorListing.props()),
-        idExtractor = AuthorListing.idExtractor,
-        shardResolver = AuthorListing.shardResolver)
+        entityProps = AuthorListing.props(),
+        settings = shardSettings,
+        extractEntityId = AuthorListing.idExtractor,
+        extractShardId = AuthorListing.shardResolver)
       ClusterSharding(system).start(
         typeName = Post.shardName,
-        entryProps = Some(Post.props(authorListingRegion)),
-        idExtractor = Post.idExtractor,
-        shardResolver = Post.shardResolver)
+        entityProps = Post.props(authorListingRegion),
+        settings = shardSettings,
+        extractEntityId = Post.idExtractor,
+        extractShardId = Post.shardResolver)
 
       if (port != "2551" && port != "2552")
         system.actorOf(Props[Bot], "bot")
@@ -61,12 +64,12 @@ object BlogApp {
         case ActorIdentity(_, Some(ref)) => SharedLeveldbJournal.setStore(ref, system)
         case _ =>
           system.log.error("Shared journal not started at {}", path)
-          system.shutdown()
+          system.terminate()
       }
       f.onFailure {
         case _ =>
           system.log.error("Lookup of shared journal at {} timed out", path)
-          system.shutdown()
+          system.terminate()
       }
     }
 

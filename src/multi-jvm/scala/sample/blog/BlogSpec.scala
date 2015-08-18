@@ -9,7 +9,7 @@ import akka.actor.ActorIdentity
 import akka.actor.Identify
 import akka.actor.Props
 import akka.cluster.Cluster
-import akka.contrib.pattern.ClusterSharding
+import akka.cluster.sharding.{ClusterShardingSettings, ClusterSharding}
 import akka.persistence.Persistence
 import akka.persistence.journal.leveldb.SharedLeveldbJournal
 import akka.persistence.journal.leveldb.SharedLeveldbStore
@@ -24,12 +24,14 @@ object BlogSpec extends MultiNodeConfig {
   val node2 = role("node2")
 
   commonConfig(ConfigFactory.parseString("""
+    akka.cluster.metrics.enabled=off
     akka.actor.provider = "akka.cluster.ClusterActorRefProvider"
     akka.persistence.journal.plugin = "akka.persistence.journal.leveldb-shared"
     akka.persistence.journal.leveldb-shared.store {
       native = off
       dir = "target/test-shared-journal"
     }
+    akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
     akka.persistence.snapshot-store.local.dir = "target/test-snapshots"
     """))
 }
@@ -71,16 +73,19 @@ class BlogSpec extends MultiNodeSpec(BlogSpec)
   }
 
   def startSharding(): Unit = {
+    val settings = ClusterShardingSettings(system)
     ClusterSharding(system).start(
       typeName = AuthorListing.shardName,
-      entryProps = Some(AuthorListing.props()),
-      idExtractor = AuthorListing.idExtractor,
-      shardResolver = AuthorListing.shardResolver)
+      entityProps = AuthorListing.props(),
+      settings = settings,
+      extractEntityId = AuthorListing.idExtractor,
+      extractShardId = AuthorListing.shardResolver)
     ClusterSharding(system).start(
       typeName = Post.shardName,
-      entryProps = Some(Post.props(ClusterSharding(system).shardRegion(AuthorListing.shardName))),
-      idExtractor = Post.idExtractor,
-      shardResolver = Post.shardResolver)
+      entityProps = Post.props(ClusterSharding(system).shardRegion(AuthorListing.shardName)),
+      settings = settings,
+      extractEntityId = Post.idExtractor,
+      extractShardId = Post.shardResolver)
   }
 
   "Sharded blog app" must {
