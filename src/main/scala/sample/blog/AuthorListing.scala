@@ -23,7 +23,7 @@ object AuthorListing {
     case m: GetPosts    => (m.author, m)
   }
 
-  val shardResolver: ShardRegion.ExtractShardId = {
+  val shardResolver: ShardRegion.ExtractShardId = msg => msg match {
     case s: PostSummary   => (math.abs(s.author.hashCode) % 100).toString
     case GetPosts(author) => (math.abs(author.hashCode) % 100).toString
   }

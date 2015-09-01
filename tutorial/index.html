@@ -8,7 +8,7 @@
 <div>
 
 <p>
-<a href="http://doc.akka.io/docs/akka/2.4-M3/scala/cluster-sharding.html" target="_blank">Akka cluster Sharding</a>
+<a href="http://doc.akka.io/docs/akka/2.4.0/scala/cluster-sharding.html" target="_blank">Akka cluster Sharding</a>
 is useful when you need to distribute actors across several nodes in the cluster and want to
 be able to interact with them using their logical identifier, but without having to care about
 their physical location in the cluster, which might also change over time.
@@ -17,14 +17,14 @@ their physical location in the cluster, which might also change over time.
 <p>
 It can be actors representing Aggregate Roots in Domain-Driven Design terminology.
 These actors typically have persistent (durable) state, which can be implemented with
-<a href="http://doc.akka.io/docs/akka/2.4-M3/scala/persistence.html" target="_blank">Akka Persistence</a>.
+<a href="http://doc.akka.io/docs/akka/2.4.0/scala/persistence.html" target="_blank">Akka Persistence</a>.
 </p>
 
 <p>
 Cluster sharding is typically used when you have many stateful actors that together consume
 more resources (e.g. memory) than fit on one machine. If you only have a few stateful actors
 it might be easier to run them on a 
-<a href="http://doc.akka.io/docs/akka/2.4-M3/scala/cluster-singleton.html" target="_blank">Cluster Singleton</a>
+<a href="http://doc.akka.io/docs/akka/2.4.0/scala/cluster-singleton.html" target="_blank">Cluster Singleton</a>
 node.
 </p>
 
@@ -45,7 +45,7 @@ Open <a href="#code/src/main/scala/sample/blog/Post.scala" class="shortcut">Post
 <p>
 <code>Post</code> is an actor representing an individual blog post, i.e. we will create a new
 <code>Post</code> actor instance for each new blog post. The actor is using 
-<a href="http://doc.akka.io/docs/akka/2.4-M3/scala/persistence.html#Event_sourcing" target="_blank">event sourcing</a>
+<a href="http://doc.akka.io/docs/akka/2.4.0/scala/persistence.html#Event_sourcing" target="_blank">event sourcing</a>
 to store the changes that build up its current state.
 </p>
 
@@ -117,7 +117,7 @@ to send them via the <code>shardRegion</code> actor, which can be retrieved via 
 <code>ClusterSharding</code> extension. The sharding feature knows how to route the
 message and it will on demand allocate the <code>Post</code> actors to cluster nodes
 and create the actor instances. Exactly how this works under the hood is described in the 
-<a href="http://doc.akka.io/docs/akka/2.4-M3/scala/cluster-sharding.html" target="_blank">documentation</a>.
+<a href="http://doc.akka.io/docs/akka/2.4.0/scala/cluster-sharding.html" target="_blank">documentation</a>.
 </p>
 
 </div>
@@ -259,7 +259,7 @@ For each additional node another <code>Bot</code> is also started.
 
 <p>
 Note that this sample runs the 
-<a href="http://doc.akka.io/docs/akka/2.4-M3/scala/persistence.html#Shared_LevelDB_journal" target="_blank">shared LevelDB journal</a>
+<a href="http://doc.akka.io/docs/akka/2.4.0/scala/persistence.html#Shared_LevelDB_journal" target="_blank">shared LevelDB journal</a>
 on the node with port 2551. This is a single point of failure, and should not be used in production. 
 A real system would use a 
 <a href="http://akka.io/community/" target="_blank">distributed journal</a>.
@@ -292,10 +292,10 @@ Here is a list of improvements to the blog application that you can try yourself
     operations in the <a href="#code/src/main/scala/sample/blog/Post.scala" class="shortcut">Post</a>
     actor and handle the failure scenarios in the <code>Bot</code>.</li>
 <li>Create a <a href="http://martinfowler.com/bliki/CQRS.html" target="_blank">CQRS</a> query side
-    by using a persistent view of the <a href="#code/src/main/scala/sample/blog/AuthorListing.scala" class="shortcut">AuthorListing</a>
-    processor.</li>
+    by using a <a href="http://doc.akka.io/docs/akka/2.4.0/scala/persistence-query.html" target="_blank">persistent query</a> of the <a href="#code/src/main/scala/sample/blog/AuthorListing.scala" class="shortcut">AuthorListing</a>
+    actor.</li>
 <li>Replace the
-    <a href="http://doc.akka.io/docs/akka/2.4-M3/scala/persistence.html#Shared_LevelDB_journal" target="_blank">shared LevelDB journal</a>
+    <a href="http://doc.akka.io/docs/akka/2.4.0/scala/persistence.html#Shared_LevelDB_journal" target="_blank">shared LevelDB journal</a>
     with a real replicated journal. Pick one
     from the <a href="http://akka.io/community/" target="_blank">community plugins</a>.</li>
 </ul>

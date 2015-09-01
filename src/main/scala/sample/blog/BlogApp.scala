@@ -33,17 +33,16 @@ object BlogApp {
       startupSharedJournal(system, startStore = (port == "2551"), path =
         ActorPath.fromString("akka.tcp://ClusterSystem@127.0.0.1:2551/user/store"))
 
-      val shardSettings = ClusterShardingSettings(system)
       val authorListingRegion = ClusterSharding(system).start(
         typeName = AuthorListing.shardName,
         entityProps = AuthorListing.props(),
-        settings = shardSettings,
+        settings = ClusterShardingSettings(system),
         extractEntityId = AuthorListing.idExtractor,
         extractShardId = AuthorListing.shardResolver)
       ClusterSharding(system).start(
         typeName = Post.shardName,
         entityProps = Post.props(authorListingRegion),
-        settings = shardSettings,
+        settings = ClusterShardingSettings(system),
         extractEntityId = Post.idExtractor,
         extractShardId = Post.shardResolver)
 

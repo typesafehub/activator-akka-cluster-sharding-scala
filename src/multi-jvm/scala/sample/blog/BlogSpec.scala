@@ -73,17 +73,16 @@ class BlogSpec extends MultiNodeSpec(BlogSpec)
   }
 
   def startSharding(): Unit = {
-    val settings = ClusterShardingSettings(system)
     ClusterSharding(system).start(
       typeName = AuthorListing.shardName,
       entityProps = AuthorListing.props(),
-      settings = settings,
+      settings = ClusterShardingSettings(system),
       extractEntityId = AuthorListing.idExtractor,
       extractShardId = AuthorListing.shardResolver)
     ClusterSharding(system).start(
       typeName = Post.shardName,
       entityProps = Post.props(ClusterSharding(system).shardRegion(AuthorListing.shardName)),
-      settings = settings,
+      settings = ClusterShardingSettings(system),
       extractEntityId = Post.idExtractor,
       extractShardId = Post.shardResolver)
   }
@@ -152,7 +151,7 @@ class BlogSpec extends MultiNodeSpec(BlogSpec)
           within(1.second) {
             listingRegion ! AuthorListing.GetPosts("Patrik")
             val posts = expectMsgType[AuthorListing.Posts].list
-            posts.isEmpty should be(false)
+            posts.isEmpty shouldBe false
             posts.last.title should be("Hash functions")
           }
         }
