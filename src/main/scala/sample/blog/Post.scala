@@ -6,8 +6,8 @@ import akka.actor.ActorRef
 import akka.actor.PoisonPill
 import akka.actor.Props
 import akka.actor.ReceiveTimeout
-import akka.contrib.pattern.ShardRegion
-import akka.contrib.pattern.ShardRegion.Passivate
+import akka.cluster.sharding.ShardRegion
+import akka.cluster.sharding.ShardRegion.Passivate
 import akka.persistence.PersistentActor
 
 object Post {
@@ -33,11 +33,11 @@ object Post {
   case class BodyChanged(body: String) extends Event
   case object PostPublished extends Event
 
-  val idExtractor: ShardRegion.IdExtractor = {
+  val idExtractor: ShardRegion.ExtractEntityId = {
     case cmd: Command => (cmd.postId, cmd)
   }
 
-  val shardResolver: ShardRegion.ShardResolver = msg => msg match {
+  val shardResolver: ShardRegion.ExtractShardId = {
     case cmd: Command => (math.abs(cmd.postId.hashCode) % 100).toString
   }
 

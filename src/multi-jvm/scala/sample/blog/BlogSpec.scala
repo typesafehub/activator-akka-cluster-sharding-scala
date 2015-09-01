@@ -9,7 +9,7 @@ import akka.actor.ActorIdentity
 import akka.actor.Identify
 import akka.actor.Props
 import akka.cluster.Cluster
-import akka.contrib.pattern.ClusterSharding
+import akka.cluster.sharding.{ClusterShardingSettings, ClusterSharding}
 import akka.persistence.Persistence
 import akka.persistence.journal.leveldb.SharedLeveldbJournal
 import akka.persistence.journal.leveldb.SharedLeveldbStore
@@ -73,14 +73,16 @@ class BlogSpec extends MultiNodeSpec(BlogSpec)
   def startSharding(): Unit = {
     ClusterSharding(system).start(
       typeName = AuthorListing.shardName,
-      entryProps = Some(AuthorListing.props()),
-      idExtractor = AuthorListing.idExtractor,
-      shardResolver = AuthorListing.shardResolver)
+      entityProps = AuthorListing.props(),
+      settings = ClusterShardingSettings(system),
+      extractEntityId = AuthorListing.idExtractor,
+      extractShardId = AuthorListing.shardResolver)
     ClusterSharding(system).start(
       typeName = Post.shardName,
-      entryProps = Some(Post.props(ClusterSharding(system).shardRegion(AuthorListing.shardName))),
-      idExtractor = Post.idExtractor,
-      shardResolver = Post.shardResolver)
+      entityProps = Post.props(ClusterSharding(system).shardRegion(AuthorListing.shardName)),
+      settings = ClusterShardingSettings(system),
+      extractEntityId = Post.idExtractor,
+      extractShardId = Post.shardResolver)
   }
 
   "Sharded blog app" must {
@@ -147,7 +149,7 @@ class BlogSpec extends MultiNodeSpec(BlogSpec)
           within(1.second) {
             listingRegion ! AuthorListing.GetPosts("Patrik")
             val posts = expectMsgType[AuthorListing.Posts].list
-            posts.isEmpty should be(false)
+            posts.isEmpty shouldBe false
             posts.last.title should be("Hash functions")
           }
         }
