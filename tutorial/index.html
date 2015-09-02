@@ -292,8 +292,8 @@ Here is a list of improvements to the blog application that you can try yourself
     operations in the <a href="#code/src/main/scala/sample/blog/Post.scala" class="shortcut">Post</a>
     actor and handle the failure scenarios in the <code>Bot</code>.</li>
 <li>Create a <a href="http://martinfowler.com/bliki/CQRS.html" target="_blank">CQRS</a> query side
-    by using a persistent view of the <a href="#code/src/main/scala/sample/blog/AuthorListing.scala" class="shortcut">AuthorListing</a>
-    processor.</li>
+    by using a <a href="http://doc.akka.io/docs/akka/2.4.0-RC1/scala/persistence-query.html" target="_blank">persistent query</a> of the <a href="#code/src/main/scala/sample/blog/AuthorListing.scala" class="shortcut">AuthorListing</a>
+    actor.</li>
 <li>Replace the
     <a href="http://doc.akka.io/docs/akka/2.4.0-RC1/scala/persistence.html#Shared_LevelDB_journal" target="_blank">shared LevelDB journal</a>
     with a real replicated journal. Pick one
