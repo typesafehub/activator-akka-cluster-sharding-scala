@@ -9,6 +9,8 @@ import akka.actor.ReceiveTimeout
 import akka.cluster.sharding.ShardRegion
 import akka.cluster.sharding.ShardRegion.Passivate
 import akka.persistence.PersistentActor
+import akka.persistence.RecoveryCompleted
+import java.util.concurrent.atomic.AtomicInteger
 
 object Post {
 
@@ -38,7 +40,7 @@ object Post {
   }
 
   val shardResolver: ShardRegion.ExtractShardId = {
-    case cmd: Command => (math.abs(cmd.postId.hashCode) % 100).toString
+    case cmd: Command => (math.abs(cmd.postId.hashCode) % 30).toString
   }
 
   val shardName: String = "Post"
@@ -51,18 +53,24 @@ object Post {
       case PostPublished  => copy(published = true)
     }
   }
+
+  val counter = new AtomicInteger
 }
 
 class Post(authorListing: ActorRef) extends PersistentActor with ActorLogging {
 
   import Post._
 
-  // self.path.parent.name is the type name (utf-8 URL-encoded) 
+  // self.path.parent.name is the type name (utf-8 URL-encoded)
   // self.path.name is the entry identifier (utf-8 URL-encoded)
   override def persistenceId: String = self.path.parent.name + "-" + self.path.name
 
   // passivate the entity when no activity
   context.setReceiveTimeout(2.minutes)
+
+  val startTime = System.nanoTime()
+  val n = counter.incrementAndGet
+  log.debug("new instance {}: {}", n, self.path.name)
 
   private var state = State(PostContent.empty, false)
 
@@ -71,10 +79,14 @@ class Post(authorListing: ActorRef) extends PersistentActor with ActorLogging {
       context.become(created)
       state = state.updated(evt)
     case evt @ PostPublished =>
-      context.become(published)
       state = state.updated(evt)
     case evt: Event => state =
       state.updated(evt)
+    case RecoveryCompleted =>
+      if (n % 1000 == 0) {
+        val duration = (System.nanoTime() - startTime) / 1000 / 1000
+        log.info("recovery completed in {} ms, count {} : {}", duration, n, self.path.name)
+      }
   }
 
   override def receiveCommand: Receive = initial
@@ -86,7 +98,7 @@ class Post(authorListing: ActorRef) extends PersistentActor with ActorLogging {
         persist(PostAdded(content)) { evt =>
           state = state.updated(evt)
           context.become(created)
-          log.info("New post saved: {}", state.content.title)
+          log.debug("New post saved: {}", state.content.title)
         }
   }
 
@@ -95,20 +107,17 @@ class Post(authorListing: ActorRef) extends PersistentActor with ActorLogging {
     case ChangeBody(_, body) =>
       persist(BodyChanged(body)) { evt =>
         state = state.updated(evt)
-        log.info("Post changed: {}", state.content.title)
+        log.debug("Post changed: {}", state.content.title)
       }
     case Publish(postId) =>
       persist(PostPublished) { evt =>
         state = state.updated(evt)
-        context.become(published)
         val c = state.content
-        log.info("Post published: {}", c.title)
+        log.debug("Post published: {}", c.title)
         authorListing ! AuthorListing.PostSummary(c.author, postId, c.title)
+        sender() ! evt
       }
-  }
-
-  def published: Receive = {
-    case GetContent(_) => sender() ! state.content
+    case _: AddPost => //already created
   }
 
   override def unhandled(msg: Any): Unit = msg match {

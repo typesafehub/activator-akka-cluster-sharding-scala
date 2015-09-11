@@ -9,6 +9,8 @@ import akka.actor.ReceiveTimeout
 import akka.cluster.sharding.ShardRegion
 import akka.cluster.sharding.ShardRegion.Passivate
 import akka.persistence.PersistentActor
+import akka.persistence.SnapshotOffer
+import akka.persistence.RecoveryCompleted
 
 object AuthorListing {
 
@@ -24,8 +26,8 @@ object AuthorListing {
   }
 
   val shardResolver: ShardRegion.ExtractShardId = msg => msg match {
-    case s: PostSummary   => (math.abs(s.author.hashCode) % 100).toString
-    case GetPosts(author) => (math.abs(author.hashCode) % 100).toString
+    case s: PostSummary   => (math.abs(s.author.hashCode) % 30).toString
+    case GetPosts(author) => (math.abs(author.hashCode) % 30).toString
   }
 
   val shardName: String = "AuthorListing"
@@ -36,6 +38,9 @@ class AuthorListing extends PersistentActor with ActorLogging {
 
   override def persistenceId: String = self.path.parent.name + "-" + self.path.name
 
+  val startTime = System.nanoTime()
+  log.debug("new instance: {}", self.path.name)
+
   // passivate the entity when no activity
   context.setReceiveTimeout(2.minutes)
 
@@ -44,8 +49,12 @@ class AuthorListing extends PersistentActor with ActorLogging {
   def receiveCommand = {
     case s: PostSummary =>
       persist(s) { evt =>
-        posts :+= evt
-        log.info("Post added to {}'s list: {}", s.author, s.title)
+        handleEvent(evt)
+        log.debug("Post added to {}'s list: {}", s.author, s.title)
+        if (lastSequenceNr % 1000 == 0) {
+          log.info("Save snapshot at sequenceNr {}", lastSequenceNr)
+          saveSnapshot(posts)
+        }
       }
     case GetPosts(_) =>
       sender() ! Posts(posts)
@@ -53,8 +62,15 @@ class AuthorListing extends PersistentActor with ActorLogging {
   }
 
   override def receiveRecover: Receive = {
-    case evt: PostSummary => posts :+= evt
+    case evt: PostSummary                            => handleEvent(evt)
+    case SnapshotOffer(_, snap: Vector[PostSummary]) => posts = snap
+    case RecoveryCompleted =>
+      val duration = (System.nanoTime() - startTime) / 1000 / 1000
+      log.info("recovery completed in {} ms : {}", duration, self.path.name)
+  }
 
+  private def handleEvent(evt: PostSummary): Unit = {
+    posts = (posts :+ evt).takeRight(10)
   }
 
 }
