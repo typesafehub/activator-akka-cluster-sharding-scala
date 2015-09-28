@@ -1,7 +1,7 @@
 import com.typesafe.sbt.SbtMultiJvm
 import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.MultiJvm
 
-val akkaVersion = "2.4.0-RC1"
+val akkaVersion = "2.4.0"
 
 val project = Project(
   id = "akka-cluster-sharding-scala",
