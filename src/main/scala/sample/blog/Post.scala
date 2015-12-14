@@ -9,6 +9,8 @@ import akka.actor.ReceiveTimeout
 import akka.cluster.sharding.ShardRegion
 import akka.cluster.sharding.ShardRegion.Passivate
 import akka.persistence.PersistentActor
+import akka.persistence.RecoveryCompleted
+import java.util.concurrent.atomic.AtomicInteger
 
 object Post {
 
@@ -51,18 +53,23 @@ object Post {
       case PostPublished  => copy(published = true)
     }
   }
+
+  val counter = new AtomicInteger
 }
 
 class Post(authorListing: ActorRef) extends PersistentActor with ActorLogging {
 
   import Post._
 
-  // self.path.parent.name is the type name (utf-8 URL-encoded) 
+  // self.path.parent.name is the type name (utf-8 URL-encoded)
   // self.path.name is the entry identifier (utf-8 URL-encoded)
   override def persistenceId: String = self.path.parent.name + "-" + self.path.name
 
   // passivate the entity when no activity
   context.setReceiveTimeout(2.minutes)
+
+  val startTime = System.nanoTime()
+  log.info("new instance {}: {}", counter.get, self.path.name)
 
   private var state = State(PostContent.empty, false)
 
@@ -75,6 +82,9 @@ class Post(authorListing: ActorRef) extends PersistentActor with ActorLogging {
       state = state.updated(evt)
     case evt: Event => state =
       state.updated(evt)
+    case RecoveryCompleted =>
+      val duration = (System.nanoTime() - startTime) / 1000 / 1000
+      log.info("recovery completed in {} ms, count {} : {}", duration, counter.incrementAndGet(), self.path.name)
   }
 
   override def receiveCommand: Receive = initial

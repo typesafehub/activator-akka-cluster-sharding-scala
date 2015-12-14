@@ -34,11 +34,22 @@ class Bot extends Actor with ActorLogging {
 
   val create: Receive = {
     case Tick =>
-      val postId = UUID.randomUUID().toString
-      n += 1
-      val title = s"Post $n from $from"
-      postRegion ! Post.AddPost(postId, Post.PostContent(currentAuthor, title, "..."))
-      context.become(edit(postId))
+      if (n == 0) {
+        for (_ <- 1 to 10000) {
+          val postId = UUID.randomUUID().toString
+          n += 1
+          val title = s"Post $n from $from"
+          postRegion ! Post.AddPost(postId, Post.PostContent(currentAuthor, title, "..."))
+        }
+      } else {
+        /*
+        val postId = UUID.randomUUID().toString
+        n += 1
+        val title = s"Post $n from $from"
+        postRegion ! Post.AddPost(postId, Post.PostContent(currentAuthor, title, "..."))
+        context.become(edit(postId))
+        */
+      }
   }
 
   def edit(postId: String): Receive = {

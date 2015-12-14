@@ -42,7 +42,7 @@ object BlogApp {
       ClusterSharding(system).start(
         typeName = Post.shardName,
         entityProps = Post.props(authorListingRegion),
-        settings = ClusterShardingSettings(system),
+        settings = ClusterShardingSettings(system).withRememberEntities(true),
         extractEntityId = Post.idExtractor,
         extractShardId = Post.shardResolver)
 
