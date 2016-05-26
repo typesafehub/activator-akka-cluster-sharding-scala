@@ -104,6 +104,7 @@ class Post(authorListing: ActorRef) extends PersistentActor with ActorLogging {
         val c = state.content
         log.info("Post published: {}", c.title)
         authorListing ! AuthorListing.PostSummary(c.author, postId, c.title)
+        //saveSnapshot(state)
       }
   }
 

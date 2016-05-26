@@ -9,6 +9,7 @@ import akka.actor.ReceiveTimeout
 import akka.cluster.sharding.ShardRegion
 import akka.cluster.sharding.ShardRegion.Passivate
 import akka.persistence.PersistentActor
+import akka.persistence.SnapshotOffer
 
 object AuthorListing {
 
@@ -46,6 +47,8 @@ class AuthorListing extends PersistentActor with ActorLogging {
       persist(s) { evt =>
         posts :+= evt
         log.info("Post added to {}'s list: {}", s.author, s.title)
+        if (posts.size % 3 == 0)
+          saveSnapshot(posts)
       }
     case GetPosts(_) =>
       sender() ! Posts(posts)
@@ -53,7 +56,12 @@ class AuthorListing extends PersistentActor with ActorLogging {
   }
 
   override def receiveRecover: Receive = {
-    case evt: PostSummary => posts :+= evt
+    case SnapshotOffer(meta, snap: Vector[PostSummary]) => 
+      println("# got snapshot: " + meta)
+      posts = snap
+    case evt: PostSummary => 
+      println("# got event: " + evt)
+      posts :+= evt
 
   }
 
