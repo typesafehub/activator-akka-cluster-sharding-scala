@@ -16,7 +16,8 @@ val project = Project(
       "com.typesafe.akka" %% "akka-cluster-sharding" % akkaVersion,
       "com.typesafe.akka" %% "akka-persistence" % akkaVersion,
       "com.typesafe.akka" %% "akka-multi-node-testkit" % akkaVersion,
-      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.14",
+      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.17",
+      "ch.qos.logback" % "logback-classic" % "1.1.3",
       "org.scalatest" %% "scalatest" % "2.1.6" % "test",
       "commons-io" % "commons-io" % "2.4" % "test"),
     // make sure that MultiJvm test are compiled by the default test compilation
